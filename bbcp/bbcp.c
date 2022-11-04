@@ -1,3 +1,10 @@
+/**
+ * This function will accept two params. A file and a file or directory.
+ * Then it will attempt to open both files and copy from the first
+ * to the second. If the second is a directory the file will be created
+ * with the same name in that directory. Directory must exist prior to call.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -10,6 +17,9 @@
 #define BUFF_SIZE 32768
 #endif
 
+/**
+ * This opens a file for reading and returns the file descriptor.
+ */
 int openFileForReading(char* path) {
 	int fd;
 	errno = 0;
@@ -20,19 +30,24 @@ int openFileForReading(char* path) {
 	return fd;
 }
 
+/**
+ * This will check if the given source is a directory or a file. It will then open the 
+ * directory if the path is a directory and then create the new file there. 
+ */
 int openFileForWriting(char* path, char* source_file) {
 	int fd;
-	int file_permission_bits = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+	// the permissions that should be set on the new file.
+	int permission_bits = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
 	errno = 0;
-	if ((fd = open(path, O_WRONLY | O_CREAT, file_permission_bits)) == -1) {
-		if (errno == EISDIR) {
-
-			if ((fd = open(path, O_RDONLY | O_DIRECTORY, file_permission_bits)) == -1) {
+	if ((fd = open(path, O_WRONLY | O_CREAT, permission_bits)) == -1) {
+		if (errno == EISDIR) { // Here we check if the error was caused because the 
+							   // given path was a diectory.
+			if ((fd = open(path, O_RDONLY | O_DIRECTORY)) == -1) {
 				fprintf( stderr, "Unable to open dir %s: %s\n", path, strerror(errno));
 				exit(EXIT_FAILURE);		
 			} 
-			if ((fd = openat(fd, source_file, O_WRONLY | O_CREAT, file_permission_bits)) == -1) {
+			if ((fd = openat(fd, source_file, O_WRONLY | O_CREAT, permission_bits)) == -1) {
 					fprintf(stderr, "Unable to create %s: %s\n", path, strerror(errno));
 					exit(EXIT_FAILURE);
 			}
@@ -58,12 +73,6 @@ void copyData(int fd1, int fd2) {
 	}
 }
 
-/**
- * This function will accept two params. A file and a file or directory.
- * Then it will attempt to open both files and copy from the first
- * to the second. If the second is a directory the file will be created
- * with the same name in that new directory. 
- */
 int main(int argc, char **argv) {
 
 	int file1, file2;

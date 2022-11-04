@@ -1,0 +1,5 @@
+This is a bare bones copy program. Will copy a given source into a given destination file/directory.
+The make file will run some tests and also has a debug option using gdb.
+Type "make run" on the command line to build and run the program.
+Type "make debug" to build, create some test files and then run gdb.
+Type "make clean" to clean up the file tree of test files.
