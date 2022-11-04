@@ -1,17 +1,12 @@
-/**
- * This function will accept two params. A file and a file or directory.
- * Then it will attempt to open both files and copy from the first
- * to the second. If the second is a directory the file will be created
- * with the same name in that directory. Directory must exist prior to call.
- */
+#include <sys/stat.h>
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <libgen.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/stat.h>
 
 #ifndef BUFF_SIZE
 #define BUFF_SIZE 32768
@@ -20,10 +15,12 @@
 /**
  * This opens a file for reading and returns the file descriptor.
  */
-int openFileForReading(char* path) {
+int
+openFileForReading(char* path)
+{
 	int fd;
 	errno = 0;
-	if ((fd = open(path, O_RDONLY)) == -1) {
+	if ((fd = open(path, O_RDONLY | O_REGULAR)) == -1) {
 		fprintf(stderr, "Unable to read %s: %s\n", path, strerror(errno));
 		exit(EXIT_FAILURE);
 	}	
@@ -34,34 +31,43 @@ int openFileForReading(char* path) {
  * This will check if the given source is a directory or a file. It will then open the 
  * directory if the path is a directory and then create the new file there. 
  */
-int openFileForWriting(char* path, char* source_file) {
+int
+openFileForWriting(char* path, char* source_file) 
+{
 	int fd;
 	// the permissions that should be set on the new file.
 	int permission_bits = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-
 	errno = 0;
-	if ((fd = open(path, O_WRONLY | O_CREAT, permission_bits)) == -1) {
-		if (errno == EISDIR) { // Here we check if the error was caused because the 
-							   // given path was a diectory.
-			if ((fd = open(path, O_RDONLY | O_DIRECTORY)) == -1) {
-				fprintf( stderr, "Unable to open dir %s: %s\n", path, strerror(errno));
-				exit(EXIT_FAILURE);		
-			} 
-			if ((fd = openat(fd, source_file, O_WRONLY | O_CREAT, permission_bits)) == -1) {
-					fprintf(stderr, "Unable to create %s: %s\n", path, strerror(errno));
-					exit(EXIT_FAILURE);
-			}
+	/* Try to open the source path. Will error if it is a directory. */
+	if ((fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, permission_bits)) == -1) {
+		/* Here we handle the situation when the destination is a directory. */
+		if (errno == EISDIR) { 
+			strcat(path, "/");
+			strcat(path, basename(source_file));
+			if ((fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, permission_bits)) == -1) {
+				fprintf(stderr, "Unable to create file %s: %s\n", path, strerror(errno));
+				exit(EXIT_FAILURE);
+			}	
+		} else {
+			fprintf(stderr, "Unable to open file %s: %s\n", path, strerror(errno));
+			exit(EXIT_FAILURE);
 		}
-	} 
+	}
 	return fd;
 }
 
-void copyData(int fd1, int fd2) {
+/**
+ * This will read data from a file descriptor and write it back out
+ * to another file descriptor.
+ */
+void 
+copyData(int fd_source, int fd_dest) 
+{
 	char buf[BUFF_SIZE];	
 	int read_val;
 	bzero(buf, BUFF_SIZE);
-	while ((read_val = read(fd1, buf, BUFF_SIZE)) > 0) {
-		if (write(fd2, buf, read_val) == -1) {
+	while ((read_val = read(fd_source, buf, BUFF_SIZE)) > 0) {
+		if (write(fd_dest, buf, read_val) == -1) {
 			fprintf(stderr, "Unable to write: %s\n", strerror(errno));
 			exit(EXIT_FAILURE);
 		}
@@ -73,9 +79,18 @@ void copyData(int fd1, int fd2) {
 	}
 }
 
-int main(int argc, char **argv) {
-
+/**
+ * This function will accept two params. A file and a file or directory.
+ * Then it will attempt to open both files and copy from the first
+ * to the second. If the second is a directory the file will be created
+ * with the same name in that directory. Directory must exist prior to call.
+ */
+int 
+main(int argc, char **argv) 
+{
 	int file1, file2;
+
+	setprogname(argv[0]);
 	
 	if (argc != 3) {
 		fprintf(stderr, "usage: %s source destination\n", argv[0]);

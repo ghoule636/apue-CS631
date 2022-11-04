@@ -10,6 +10,9 @@ debug: bbcp.c
 	@mkdir test
 	@gdb --args ./bbcp test1.txt test/
 
+runTest:
+	./testcp.sh -v -p bbcp
+
 bbcp: bbcp.c
 	@cc -Wall -Wextra -Werror bbcp.c -o bbcp
 
