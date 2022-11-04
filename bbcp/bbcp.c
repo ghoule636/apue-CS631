@@ -20,15 +20,24 @@ int openFileForReading(char* path) {
 	return fd;
 }
 
-int openFileForWriting(char* path) {
+int openFileForWriting(char* path, char* source_file) {
 	int fd;
 	int file_permission_bits = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
 	errno = 0;
 	if ((fd = open(path, O_WRONLY | O_CREAT, file_permission_bits)) == -1) {
-		fprintf(stderr, "Unable to create %s: %s\n", path, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
+		if (errno == EISDIR) {
+
+			if ((fd = open(path, O_RDONLY | O_DIRECTORY, file_permission_bits)) == -1) {
+				fprintf( stderr, "Unable to open dir %s: %s\n", path, strerror(errno));
+				exit(EXIT_FAILURE);		
+			} 
+			if ((fd = openat(fd, source_file, O_WRONLY | O_CREAT, file_permission_bits)) == -1) {
+					fprintf(stderr, "Unable to create %s: %s\n", path, strerror(errno));
+					exit(EXIT_FAILURE);
+			}
+		}
+	} 
 	return fd;
 }
 
@@ -60,12 +69,12 @@ int main(int argc, char **argv) {
 	int file1, file2;
 	
 	if (argc != 3) {
-		fprintf(stderr, "usage: %s file_name destination\n", argv[0]);
+		fprintf(stderr, "usage: %s source destination\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
 	file1 = openFileForReading(argv[1]);	
-	file2 = openFileForWriting(argv[2]);
+	file2 = openFileForWriting(argv[2], argv[1]);
 
 	copyData(file1, file2);
 	
