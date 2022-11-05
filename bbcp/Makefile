@@ -11,7 +11,7 @@ debug: bbcp.c
 	@gdb --args ./bbcp test1.txt test/
 
 runTest:
-	./testcp.sh -v -p bbcp
+	./testcp.sh -p bbcp
 
 bbcp: bbcp.c
 	@cc -Wall -Wextra -Werror bbcp.c -o bbcp

@@ -103,7 +103,7 @@ checkCopySuccesses() {
 	cd ${DIR}
 	for arg in ro_file_to_file rw_file_to_file abs_file_to_dir \
 		rel_file_to_dir abs_file_to_subdir file_to_existing \
-		file_to_slash_dir zero big; do
+		file_to_slash_dir zero ; do
 		rm -f file >/dev/null 2>&1
 		cmd=$(eval echo ${CP} \$${arg})
 		runTest "${arg}" "${cmd}" 0
@@ -164,8 +164,14 @@ compareFiles() {
 	local file2=$3
 
 	verbose "Test #${TOTAL} (${name}): Comparing '${file1}' to '${file2}'..." 1
-	cmp -s ${file1} ${file2}
+	cmp -l ${file1} ${file2}
 	if [ $? -gt 0 ]; then
+		#echo "file 1: "
+		#od -c ${file1}
+		#ls -l ${file1}
+		#echo "file 2: "
+		#ls -l ${file2}
+		#od -c ${file1}
 		echo "Files '${file1}' and '${file2}' differ." >&2
 		NFAIL=$(( ${NFAIL} + 1 ))
 		FAILED_TESTS="${FAILED_TESTS} ${name}"

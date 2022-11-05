@@ -12,6 +12,8 @@
 #define BUFF_SIZE 32768
 #endif
 
+static void usage();
+
 /**
  * This opens a file for reading and returns the file descriptor.
  */
@@ -28,32 +30,42 @@ openFileForReading(char* path)
 }
 
 /**
- * This will check if the given source is a directory or a file. It will then open the 
- * directory if the path is a directory and then create the new file there. 
+ * This will open the target file or create it.
+ *
  */
 int
-openFileForWriting(char* path, char* source_file) 
+openFileForWriting(char* path)
 {
 	int fd;
-	// the permissions that should be set on the new file.
 	int permission_bits = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 	errno = 0;
-	/* Try to open the source path. Will error if it is a directory. */
+	
 	if ((fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, permission_bits)) == -1) {
-		/* Here we handle the situation when the destination is a directory. */
-		if (errno == EISDIR) { 
+		fprintf(stderr, "Unable to create file %s: %s\n", path, strerror(errno));
+		exit(EXIT_FAILURE);
+	}	
+	return fd;
+}
+
+/**
+ * Determines if the target path is a directory and if so appends
+ * the name of the source file to it's path.
+ */
+char*
+getWritePath(char* path, char* source_file)
+{
+	errno = 0;
+	if (open(path, O_WRONLY | O_CREAT) == -1) {
+		if (errno == EISDIR) {
 			strcat(path, "/");
 			strcat(path, basename(source_file));
-			if ((fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, permission_bits)) == -1) {
-				fprintf(stderr, "Unable to create file %s: %s\n", path, strerror(errno));
-				exit(EXIT_FAILURE);
-			}	
 		} else {
 			fprintf(stderr, "Unable to open file %s: %s\n", path, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
+
 	}
-	return fd;
+	return path;
 }
 
 /**
@@ -89,20 +101,37 @@ int
 main(int argc, char **argv) 
 {
 	int file1, file2;
+	struct stat f1_stat, f2_stat;
 
 	setprogname(argv[0]);
 	
 	if (argc != 3) {
-		fprintf(stderr, "usage: %s source destination\n", argv[0]);
-		exit(EXIT_FAILURE);
+		usage();
 	}
 
-	file1 = openFileForReading(argv[1]);	
-	file2 = openFileForWriting(argv[2], argv[1]);
+	getWritePath(argv[2], argv[1]);
 
+	/* Check if the files are actually the same. */
+	stat(argv[1], &f1_stat);
+	stat(argv[2], &f2_stat);
+	if (f1_stat.st_ino == f2_stat.st_ino) {
+		fprintf(stderr, "The files are the same!\n");
+		exit(EXIT_FAILURE);
+	}		
+	chmod(argv[2], f1_stat.st_mode);	
+
+	file1 = openFileForReading(argv[1]);	
+	file2 = openFileForWriting(argv[2]);
+	
 	copyData(file1, file2);
 	
 	close(file1);
 	close(file2);
 	return(EXIT_SUCCESS);
- }
+}
+
+static void
+usage(void) {
+	fprintf(stderr, "usage: %s source destination\n", getprogname());
+	exit(EXIT_FAILURE);
+}
