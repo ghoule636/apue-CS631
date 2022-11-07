@@ -134,6 +134,9 @@ checkCopySuccesses() {
 	timeout 5 ${CP} fifo file2 >/dev/null 2>&1 &
 	timeout 1 /bin/sh -c "echo foo >fifo"
 	echo foo >file1
+	ls -l fifo
+	ls -l file1
+	ls -l file2
 	compareFiles "copy_fifo" file1 file2
 }
 
@@ -171,7 +174,7 @@ compareFiles() {
 		#ls -l ${file1}
 		#echo "file 2: "
 		#ls -l ${file2}
-		#od -c ${file1}
+		#od -c ${file2}
 		echo "Files '${file1}' and '${file2}' differ." >&2
 		NFAIL=$(( ${NFAIL} + 1 ))
 		FAILED_TESTS="${FAILED_TESTS} ${name}"

@@ -40,7 +40,7 @@ openFileForWriting(char* path)
 	int permission_bits = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 	errno = 0;
 	
-	if ((fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, permission_bits)) == -1) {
+	if ((fd = open(path, O_RDWR | O_CREAT | O_TRUNC, permission_bits)) == -1) {
 		fprintf(stderr, "Unable to create file %s: %s\n", path, strerror(errno));
 		exit(EXIT_FAILURE);
 	}	
